@@ -1,18 +1,5 @@
 // API
 
-// Board
-const kanbanBoard = {
-	title: "Task Manager",
-	
-}
-
-// List
-const sampleBoard = {
-	ListId: 456,
-	title: "Todo",
-	tasks: [12345]
-}
-
 // Task
 const sampleTask = {
 	taskId: 12345,
@@ -24,6 +11,20 @@ const sampleTask = {
 	dueDate: "08-12-2020",
 	dueTime: ""
 }
+
+// List
+const sampleList = {
+	ListId: 456,
+	title: "Todo",
+	tasks: [sampleTask]
+}
+
+// Board
+const kanbanBoard = {
+	title: "Task Manager",
+	lists: [sampleList]
+}
+
 
 // Routes:
 
