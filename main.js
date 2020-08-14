@@ -28,7 +28,8 @@ const kanbanBoard = {
 
 // Routes:
 
-// GET /tasks
+// GET /board
+// GET /list/:id
 // GET /task/:id
 // POST
 // PUT /updatetask/:id

@@ -1,0 +1,48 @@
+.board {
+	display: flex;
+	flex-direction: row;
+	/*height: 95vh;*/
+	width: 95%;
+	background-color: aquamarine;
+	box-sizing: border-box;
+	justify-content: flex-start;
+}
+
+.list {
+	display: flex;
+	flex-direction: column;
+	height: 95%;
+	width: 275px;
+	background-color: beige;
+	box-sizing: border-box;
+	margin: 10px;
+	justify-content: flex-start;
+}
+
+.listHeader {
+	padding: 15px;
+	height: 50px;
+	box-sizing: border-box;
+}
+
+.listFooter {
+	padding: 5px;
+	box-sizing: border-box;
+}
+
+.listBody {
+	box-sizing: border-box;
+}
+
+.task {
+	height: 200px;
+	background-color: cyan;
+	box-sizing: border-box;
+	padding: 10px;
+	margin: 5px;
+	justify-content: flex-start;
+}
+
+.addButton {
+	width: 100%;
+}
