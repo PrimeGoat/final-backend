@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>TASX</title>
+	<link rel="stylesheet" href="style.css">
+</head>
+
+<!-- START LIST TEMPLATE -->
+<div class="!list" data-listid="0" style="display: none;" id="listTemplate">
+	<div class="listHeader">
+		<div class="listTitle">
+			List Title
+		</div>
+		<div class="listEdit">
+			<input type="text" class="listEditInput">
+		</div>
+	</div>
+	<div class="listBody connectedSorts">
+		<!-- TASK GOES HERE -->
+	</div>
+	<div class="listFooter">
+		<button class="addButton">Add Another Task</button>
+		<button>X</button>
+	</div>
+</div>
+<!-- END LIST TEMPLATE -->
+
+<!-- TASK TEMPLATE -->
+<div class="!task" data-taskid="0" style="display: none;" id="taskTemplate">
+	<div class="taskTitle">
+		Task
+	</div>
+	<div class="taskEdit">
+		<input type="text" class="taskEditInput">
+	</div>
+	<div class="dates">
+		<div class="dateRow">
+			<input type="checkbox" class="startCheck">
+			<span class="dateSpan">
+				<label>Start date:</label>
+			</span>
+			<input type="date" class="startDate dateInput">
+		</div>
+		<div class="dateRow">
+			<input type="checkbox" class="dueCheck">
+			<span class="dateSpan">
+				<label>Due date:</label>
+			</span>
+			<input type="date" class="dueDate dateInput">
+		</div>
+		<button class="deleteTask">DELETE</button>
+	</div>
+</div>
+<!-- END TASK TEMPLATE -->
+
+<body>
+	<div class="main">
+		<div class="board">
+			<div class="boardHeader">
+				<span id="boardTitle">BOARD HEADER</span>
+				<input type="text" id="boardEdit" value="BOARD HEADER"></input>
+				<button class="addList" id="addListButton">Add Another List</button>
+			</div>
+			<div class="boardBody" id="insertLists">
+			</div>
+		</div>
+	</div>
+	<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+	<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+<!--script src="https://code.jquery.com/jquery-3.5.1.js"></script-->
+	<!--script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.js"></script-->
+	<script src="client.js"></script>
+</body>
+</html>
