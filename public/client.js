@@ -21,7 +21,7 @@ var kanbanBoard = {
 };
 
 
-
+// Initial populate: Obtain entire dataset from API
 const getBoard = function() {
 	const request = new XMLHttpRequest();
 
@@ -29,7 +29,7 @@ const getBoard = function() {
 
 	request.onreadystatechange = () => {
 		if(request.readyState === 4 && request.status === 200) {
-			console.log(request.responseText);
+			console.log("Incoming board: ", request.responseText);
 			kanbanBoard = JSON.parse(request.responseText);
 			clearBoard();
 			populateBoard();
@@ -39,6 +39,7 @@ const getBoard = function() {
 	request.send();
 }
 
+// Send API command: All API interaction done through here
 const sendApi = function(command, data = "") {
 	const request = new XMLHttpRequest();
 
@@ -71,17 +72,16 @@ const sendApi = function(command, data = "") {
 		}
 	}
 	request.send(JSON.stringify(body));
-	console.log(JSON.stringify(body));
 	console.log(`Sending API command: ${command} with data: ${data}`);
 }
 
+// Sets up jQuery's sortable feature to allow for rearranging of lists and tasks
 const setupSortables = function() {
 	$( () => {
 		$( ".listBody" ).sortable({
 			connectWith: ".connectedSorts",
 			stop: () => {
 				const structure = getBoardStructure();
-				console.log("Task item has been moved.");
 			}
 		}).disableSelection();
 	} );
@@ -91,25 +91,25 @@ const setupSortables = function() {
 			axis: 'x',
 			change: () => {
 				const structure = getBoardStructure();
-				console.log("List has been moved.");
 			}
 		}).disableSelection();
 	} );
 }
 
+// Clears the board
 const clearBoard = function() {
 	//const lists = document.querySelector("#insertLists");
 	const lists = document.children[0].children[1].children[2].children[0].children[1];
 
-	console.log(lists);
+	//console.log(lists);
 	while(lists.firstChild) lists.lastChild.remove();
 }
 
+// Populates the board, making it conform to the contents of the global kanbanBoard object
 const populateBoard = function() {
 	const boardTitle = document.getElementById("boardTitle");
 	boardTitle.innerText = kanbanBoard.title;
 
-	console.log(kanbanBoard.lists);
 	for(list of kanbanBoard.lists) {
 		placeList(list.title, list.listid);
 
@@ -120,6 +120,7 @@ const populateBoard = function() {
 	setupSortables();
 }
 
+// Sets up events to allow for the renaming of the board
 const boardNaming = function() {
 	const boardTitle = document.getElementById("boardTitle");
 	const boardTitleEdit = document.getElementById("boardEdit");
@@ -136,9 +137,9 @@ const boardNaming = function() {
 	});
 }
 
+// Event handler for board title editing: Entering editing mode
 const editBoard = function(event) {
 	const text = event.target.innerText;
-	console.log("Board text: ", text);
 
 	const label = event.target;
 	const edit = event.target.parentElement.children[1];
@@ -149,6 +150,7 @@ const editBoard = function(event) {
 	edit.select();
 }
 
+// Exit board title editing mode and update label
 const saveBoardEdit = function(element) {
 	const edit = element;
 	const label = element.parentElement.children[0];
@@ -158,17 +160,26 @@ const saveBoardEdit = function(element) {
 	label.style.display = 'inline';
 	edit.style.display = 'none';
 
-	sendApi('renameBoard', edit.value);
+	if(edit.value != kanbanBoard.title) {
+		// Value has changed.  Send it to API and update object
+		kanbanBoard.title = edit.value;
+		sendApi('renameBoard', edit.value);
+	}
 }
 
+//  Places a new list onto the board
 const placeList = function(name = "New List", id = "") {
 	const boardBody = document.querySelector("#insertLists");
-	if(boardBody == null) return false;
+	if(boardBody == null) {
+		console.log("Can't find board body");
+		return false;
+	}
 
 	boardBody.appendChild(createList(name, id));
 	return true;
 }
 
+// Places a new task into a specified list
 const placeTask = function(lid, name = "New Task", id = "", start = false, startDate = "", due = false, dueDate = "") {
 	// Task selector: `.listBody > .task[data-taskid='${taskid}']`
 	// List selector: `#insertLists > .list[data-listid='${listid}'] > .listBody`
@@ -181,10 +192,9 @@ const placeTask = function(lid, name = "New Task", id = "", start = false, start
 	return true;
 }
 
+// Returns the board layout
 const getBoardStructure = function() {
 	const lists = document.querySelector('.boardBody').children;
-	console.log("Length of lists: ", lists.length);
-
 	const structure = [];
 
 	for(list of lists) {
@@ -208,7 +218,27 @@ const getBoardStructure = function() {
 	return structure;
 }
 
+// Creates a unique ID number
+const makeId = function() {
+	let id;
 
+	do {
+		id = Math.floor(Math.random() * (99999 - 11111) + 11111);
+	} while(idExists(id));
+	return id;
+}
+
+// Checks to see if ID number is already in use
+const idExists = function(id) {
+	for(list of kanbanBoard.lists) {
+		if(list.listid == id) return true;
+		for(task of list.tasks)
+			if(task.taskid == id) return true;
+	}
+	return false;
+}
+
+// Creates a new list element
 const createList = function(name = "New List", id = "") {
 	const listTemplate = document.getElementById("listTemplate");
 
@@ -217,7 +247,7 @@ const createList = function(name = "New List", id = "") {
 	newList.removeAttribute("id");
 	newList.removeAttribute("style");
 	newList.className = "list";
-	id = (id == "") ? listid++ : id;
+	id = (id === "") ? makeId() : id;
 	newList.setAttribute("data-listid", id);
 
 	// Set up events for editing the list's name
@@ -251,6 +281,7 @@ const createList = function(name = "New List", id = "") {
 	return newList;
 }
 
+// Deletes a list
 const deleteList = function(element, id) {
 	if(!confirm("Are you sure you want to delete this list?")) return;
 
@@ -260,9 +291,9 @@ const deleteList = function(element, id) {
 	console.log("List ID " + id + " has been removed.");
 }
 
+// Event handler for list title editing: Entering editing mode
 const editList = function(event) {
 	const text = event.target.innerText;
-	console.log(text);
 
 	const textDiv = event.target;
 	const editDiv = event.target.parentElement.children[1];
@@ -274,6 +305,7 @@ const editList = function(event) {
 	editList.select();
 }
 
+// Exit list title editing mode and update label
 const saveListEdit = function(element) {
 	const editText = element;
 	const editDiv = element.parentElement;
@@ -287,9 +319,8 @@ const saveListEdit = function(element) {
 	//TODO: Tell API that list has been renamed
 }
 
-
+// Event handler for "Add Task" button
 const addTask = function(event) {
-	console.log("Add Task button pressed");
 	const list = event.target.parentElement.parentElement.children[1];
 	const newTask = createTask()
 	list.appendChild(newTask);
@@ -297,8 +328,8 @@ const addTask = function(event) {
 	taskName.dispatchEvent(new Event("click"));
 }
 
+// Event handler for "Add List" button
 const addList = function(event) {
-	console.log("Add List button pressed");
 	const boardBody = document.getElementById("insertLists");
 
 	const newList = createList("New List");
@@ -308,20 +339,15 @@ const addList = function(event) {
 	listName.dispatchEvent(new Event("click"));
 }
 
+// Creates a task element
 const createTask = function(name = "New Task", start = false, startDate = "", due = false, dueDate = "", id = "") {
 	const taskTemplate = document.getElementById("taskTemplate");
 	const newTask = taskTemplate.cloneNode(true);
 	newTask.removeAttribute("id");
 	newTask.removeAttribute("style");
 	newTask.className = "task";
-	id = (id == "") ? taskid++ : id;
+	id = (id == "") ? makeId() : id;
 	newTask.setAttribute("data-taskid", id);
-
-	// console.log("NEW TASK DATE STUFF")
-	// console.log(newTask.children[2].children[0].children[0]);
-	// console.log(newTask.children[2].children[0].children[2]);
-	// console.log(newTask.children[2].children[1].children[0]);
-	// console.log(newTask.children[2].children[1].children[2]);
 
 	// Populate task
 	const taskName = newTask.children[0];
@@ -368,13 +394,14 @@ const createTask = function(name = "New Task", start = false, startDate = "", du
 	return newTask;
 }
 
+// Deletes a task
 const deleteTask = function(element, id) {
 	element.remove();
 
 	//TODO: Tell API that task was removed
-	console.log("Task ID " + id + " has been removed.");
 }
 
+// Checks the status of a checkbox and takes appropriate measures
 const checkCheck = function(check, date, initial = false) {
 	if(check.checked) unGreyDate(date);
 	else greyOutDate(date);
@@ -384,33 +411,32 @@ const checkCheck = function(check, date, initial = false) {
 	}
 }
 
+// Deals with changes to a task
 const updateTask = function(element) {
 	//TODO: Tell API that task has been updated
 }
 
+// Greys out an unchecked date
 const greyOutDate = function(element) {
 	element.classList.add("dateGreyed");
 	element.setAttribute("readonly", "");
 	element.setAttribute("disabled", "");
 }
 
+// Reactivates a checked date
 const unGreyDate = function(element) {
 	element.classList.remove("dateGreyed");
 	element.removeAttribute("readonly");
 	element.removeAttribute("disabled");
 }
 
-var listid = 0;
-var taskid = 0;
-
+// Event handler for task title editing:  Entering editing mode
 function editTask(event) {
 	const text = event.target.innerText;
-	console.log(text);
 
 	const textDiv = event.target;
 	const editDiv = event.target.parentElement.children[1];
 	const editText = event.target.parentElement.children[1].children[0];
-	console.log(editText);
 	editText.value = textDiv.innerText;
 	textDiv.style.display = 'none';
 	editDiv.style.display = 'inline';
@@ -418,6 +444,7 @@ function editTask(event) {
 	editText.select();
 }
 
+// Exit task title editing mode and update label
 const saveTaskEdit = function(element) {
 	const editText = element;
 	const editDiv = element.parentElement;
@@ -431,7 +458,14 @@ const saveTaskEdit = function(element) {
 	//TODO: Tell API that task has been edited
 }
 
+// Set up event handler for "Add List" button
 document.getElementById("addListButton").addEventListener("click", addList);
+
+// Populates the board, making it conform to the contents of the global kanbanBoard object (activation)
 populateBoard();
+
+// Sets up events to allow for the renaming of the board (activation)
 boardNaming();
+
+// Initial populate: Obtain entire dataset from API (activation)
 getBoard();

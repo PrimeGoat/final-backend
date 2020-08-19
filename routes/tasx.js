@@ -24,12 +24,16 @@ router.get('/board', (req, res) => {
 });
 
 router.put('/renameboard', (req, res) => {
-	console.log("Rename board received:");
-	console.log(req.body);
 	const title = req.body.title.trim();
-
-	tasx.board.title = title;
-	return res.status(200).json({success: true, response: `Board renamed to ${title}`});
+	console.log("Rename board request received: ", title);
+	if(title != "") {
+		tasx.board.title = title;
+		console.log(`Board renamed to ${title}, sending client confirmation.`);
+		return res.status(200).json({success: true, response: `Board renamed to ${title}`});
+	} else {
+		console.log("Invalid title, sending client rejection.");
+		return res.status(500).json({success: false, response: 'Invalid title'});
+	}
 });
 
 /*

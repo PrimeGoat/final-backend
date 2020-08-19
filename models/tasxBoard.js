@@ -15,7 +15,7 @@ const sampleList = {
 
 // Board
 const sampleBoard = {
-	title: "TASX",
+	title: "TASX Management",
 	lists: [
 		sampleList,
 		{
@@ -40,20 +40,20 @@ const sampleBoard = {
 }
 
 const kanbanBoard = {
-	title: "TASX",
+	title: "TASX Management",
 	lists: [
 		{
 			listid: 0,
 			title: "Todo",
 			tasks: [
 				{
-					taskid: 0,
+					taskid: 1,
 					title: "Set up new todo list",
 					startDate: "2020-08-19",
 					dueDate: "2020-08-20"
 				},
 				{
-					taskid: 1,
+					taskid: 2,
 					title: "Create calendar",
 					startDate: "",
 					dueDate: "2020-08-22"
@@ -61,11 +61,11 @@ const kanbanBoard = {
 			]
 		},
 		{
-			listid: 1,
+			listid: 3,
 			title: "Doing",
 			tasks: [
 				{
-					taskid: 2,
+					taskid: 4,
 					title: "Create backend API",
 					startDate: "2020-08-19",
 					dueDate: ""
@@ -73,7 +73,7 @@ const kanbanBoard = {
 			]
 		},
 		{
-			listid: 2,
+			listid: 5,
 			title: "Done",
 			tasks: []
 		}
