@@ -29,9 +29,9 @@ const getBoard = function() {
 	request.onreadystatechange = () => {
 		if(request.readyState === 4 && request.status === 200) {
 			console.log("Incoming board: ", request.responseText);
-			kanbanBoard = JSON.parse(request.responseText);
 			clearBoard();
-			populateBoard();
+			//kanbanBoard = JSON.parse(request.responseText);
+			populateBoard(JSON.parse(request.responseText));
 		}
 	}
 
@@ -51,6 +51,12 @@ const sendApi = function(command, data = "") {
 			body = {
 				title: data
 			};
+			break;
+		case 'newlist':
+			method = 'POST';
+			tail = 'newlist';
+			body = data;
+			data = `List ID ${data.listid}`;
 			break;
 		case 'renamelist':
 			method = 'PUT';
@@ -77,7 +83,7 @@ const sendApi = function(command, data = "") {
 			body = data;
 			break;
 		default:
-			console.log("Invalid command: " + command);
+			console.log("sendApi: Invalid command: " + command);
 			return;
 	}
 
@@ -128,20 +134,30 @@ const clearBoard = function() {
 	//const lists = document.querySelector("#insertLists");
 	const lists = document.children[0].children[1].children[2].children[0].children[1];
 
-	//console.log(lists);
+	// Clear DB
+	kanbanBoard = {
+		title: "TASX",
+		lists: []
+	};
+
+	// Clear DOM
 	while(lists.firstChild) lists.lastChild.remove();
 }
 
-// Populates the board, making it conform to the contents of the global kanbanBoard object
-const populateBoard = function() {
+// Populates the board, making it conform to the contents of the specified kanbanboard object
+const populateBoard = function(board) {
+	console.log("Populate board: ", board);
+	// Set board title
+	kanbanBoard.title = board.title;
 	const boardTitle = document.getElementById("boardTitle");
 	boardTitle.innerText = kanbanBoard.title;
 
-	for(list of kanbanBoard.lists) {
-		placeList(list.title, list.listid);
+	// Parse the board object to build the working board
+	for(list of board.lists) {
+		placeList(list.title, list.listid, true);
 
 		for(task of list.tasks) {
-			placeTask(list.listid, task.title, task.taskid, task.startDate != "", task.startDate, task.dueDate != "", task.dueDate);
+			placeTask(list.listid, task.title, task.taskid, task.startDate != "", task.startDate, task.dueDate != "", task.dueDate, true);
 		}
 	}
 	setupSortables();
@@ -195,14 +211,14 @@ const saveBoardEdit = function(element) {
 }
 
 //  Places a new list onto the board
-const placeList = function(name = "New List", id = "") {
+const placeList = function(name = "New List", id = "", dontSend = false) {
 	const boardBody = document.querySelector("#insertLists");
 	if(boardBody == null) {
 		console.log("Can't find board body");
 		return false;
 	}
 
-	boardBody.appendChild(createList(name, id));
+	boardBody.appendChild(createList(name, id, dontSend));
 	return true;
 }
 
@@ -266,7 +282,13 @@ const idExists = function(id) {
 }
 
 // Creates a new list element
-const createList = function(name = "New List", id = "") {
+const createList = function(name = "New List", id = "", dontSend = false) {
+	id = (id === "") ? makeId() : id;
+	if(getListName(id) !== null) {
+		// List with same ID already exists
+		throw "Attempted to create a list with an ID that already exists: " + id;
+	}
+
 	const listTemplate = document.getElementById("listTemplate");
 
 	// Create list
@@ -274,7 +296,6 @@ const createList = function(name = "New List", id = "") {
 	newList.removeAttribute("id");
 	newList.removeAttribute("style");
 	newList.className = "list";
-	id = (id === "") ? makeId() : id;
 	newList.setAttribute("data-listid", id);
 
 	// Set up events for editing the list's name
@@ -303,7 +324,16 @@ const createList = function(name = "New List", id = "") {
 		deleteList(newList, id);
 	})
 
-	//TODO: Tell API that new list has been created
+	// Add list to db
+	kanbanBoard.lists.push({
+		listid: id,
+		title: name,
+		tasks: []
+	});
+	console.log(kanbanBoard.lists);
+
+	// Tell the API that we have a new list added
+	if(!dontSend) sendApi('newlist', {listid: id, title: name, tasks: []});
 
 	return newList;
 }
@@ -494,20 +524,22 @@ const updateTask = function(element) {
 		taskid: taskId,
 		title: element.children[0].innerText,
 		startDate: (element.children[2].children[0].children[0].checked) ?
-			element.children[2].children[0].children[2].value : "",
-		dueDate: (element.children[2].children[1].children[0].checked) ?
-			element.children[2].children[1].children[2].value : "",
+					element.children[2].children[0].children[2].value : "",
+		dueDate:   (element.children[2].children[1].children[0].checked) ?
+					element.children[2].children[1].children[2].value : "",
 	};
 
-	if(tasksDiffer(currentTask, DOMtask)) {
+	if(currentTask.title			!== DOMtask.title
+		|| currentTask.startDate	!== DOMtask.startDate
+		|| currentTask.dueDate		!== DOMtask.dueDate) {
 		// Task has changed.  Send it to API and update object
 		console.log("Tasks differ");
 		kanbanBoard.lists[currentTaskIndex[0]].tasks[currentTaskIndex[1]] = DOMtask;
 		sendApi('updatetask', DOMtask);
 	}
-
 }
 
+// Below function is no longer used, it was turned into a long if statement above.  Keeping it just in case.
 // Compares two tasks.  Used to check for changes in a task
 const tasksDiffer = function(task1, task2) {
 	if(task1.title !== task2.title) return true;
@@ -551,7 +583,7 @@ const saveTaskEdit = function(element) {
 	const editDiv = element.parentElement;
 	const textDiv = element.parentElement.parentElement.children[0];
 
-	if(editText.value.trim() == "") editText.value = "[Enter title]"
+	if(editText.value.trim() == "") editText.value = "[Enter title]";
 	textDiv.innerText = editText.value;
 	textDiv.style.display = 'inline';
 	editDiv.style.display = 'none';
@@ -563,7 +595,7 @@ const saveTaskEdit = function(element) {
 document.getElementById("addListButton").addEventListener("click", addList);
 
 // Populates the board, making it conform to the contents of the global kanbanBoard object (activation)
-populateBoard();
+populateBoard(kanbanBoard);
 
 // Sets up events to allow for the renaming of the board (activation)
 boardNaming();

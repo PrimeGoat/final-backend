@@ -9,7 +9,7 @@ const tasx = require('../models/tasxBoard');
 * PUT /updatetask - Edits a task
 * PUT /renameboard - Renames the board
 * PUT /renamelist/:listid - Renames a list
-PUSH /newlist - Adds new list to end of lists
+* PUSH /newlist - Adds new list to end of lists
 PUSH /newtask/:listid - Adds new task to end of a list
 DELETE /deltask/:taskid - Deletes a task
 DELETE /dellist/:listid - Deletes a list and all of its tasks
@@ -34,6 +34,15 @@ router.put('/renameboard', (req, res) => {
 		console.log("Renameboard: Invalid title, sending client rejection.");
 		return res.status(500).json({success: false, response: 'Invalid title'});
 	}
+});
+
+// PUSH /newlist - Adds new list to end of lists
+router.post('/newlist', (req, res) => {
+	if(!req.body.listid || !req.body.title) return res.status(500).json({success: false, response: 'Newlist: Invalid list parameters.'});
+
+	tasx.board.lists.push(req.body);
+
+	return res.status(200).json({success: true, response: 'New list added.'});
 });
 
 // PUT /renamelist - Renames a list
@@ -72,8 +81,7 @@ router.put('/updatetask', (req, res) => {
 //   { listid: 'DONE', tasks: [] }
 // ]
 
-
-// PUT /layout - Sends a bare (only IDs) layout.  This is sent whenever
+// PUT /layout - Sends a bare (only IDs) layout.  This is sent whenever a task or list is moved around.
 router.put('/layout', (req, res) => {
 	console.log("Received an updated layout: ", req.body);
 
