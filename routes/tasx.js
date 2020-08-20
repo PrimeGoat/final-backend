@@ -4,11 +4,11 @@ const tasx = require('../models/tasxBoard');
 
 /*\  ROUTES  /*\
 
-GET /board - Gets entire structure
-PUT /structure - Sends a bare (only IDs) structure.  This is sent whenever anything is moved around
+* GET /board - Gets entire layout and content
+* PUT /layout - Sends a bare (only IDs) layout.  This is sent whenever anything is moved around
 PUT /task/:id - Edits a task
-PUT /renameboard - Renames the board
-PUT /renamelist/:listid - Renams a list
+* PUT /renameboard - Renames the board
+PUT /renamelist/:listid - Renames a list
 PUSH /newlist - Adds new list to end of lists
 PUSH /newtask/:listid - Adds new task to end of a list
 DELETE /deltask/:taskid - Deletes a task
@@ -16,13 +16,13 @@ DELETE /dellist/:listid - Deletes a list and all of its tasks
 
 \*/
 
+// GET /board - Gets entire layout and content
 router.get('/board', (req, res) => {
-	console.log("YO!!!");
-
 	console.log(JSON.stringify(tasx.board));
 	return res.status(200).json(tasx.board);
 });
 
+// PUT /renameboard - Renames the board
 router.put('/renameboard', (req, res) => {
 	const title = req.body.title.trim();
 	console.log("Rename board request received: ", title);
@@ -35,6 +35,67 @@ router.put('/renameboard', (req, res) => {
 		return res.status(500).json({success: false, response: 'Invalid title'});
 	}
 });
+
+//  [
+//   { listid: 'DOING', tasks: [ '4' ] },
+//   { listid: 'TODO', tasks: [ '1', '2' ] },
+//   { listid: 'DONE', tasks: [] }
+// ]
+
+
+// PUT /layout - Sends a bare (only IDs) layout.  This is sent whenever
+router.put('/layout', (req, res) => {
+	console.log("Received an updated layout: ", req.body);
+
+	const newLists = [];
+
+	for(let i = 0; i < req.body.length; i++) {
+		let listName = getListName(req.body[i].listid);
+		if(listName == null) {
+			return res.status(500).json({success: false, response: 'Invalid list ID encountered.'});
+		}
+		let entry = {
+			listid: req.body[i].listid,
+			title: listName,
+			tasks: []
+		};
+
+		console.log("Processing tasks: ", req.body[i].tasks);
+		for(task of req.body[i].tasks) {
+			let taskName = getTaskById(task);
+			if(taskName == null) {
+				return res.status(500).json({success: false, response: 'Invalid task ID encountered.'});
+			}
+			entry.tasks.push(taskName);
+		}
+		console.log("Entry built: ", entry);
+		newLists.push(entry);
+	}
+
+	tasx.board.lists = [...newLists];
+
+	return res.status(200).json({success: true, response: 'New layout saved.'});
+});
+
+// Returns the name of the list with specified ID, or null if not found
+const getListName = function(id) {
+	for(let list of tasx.board.lists)
+		if(list.listid === id) return list.title;
+	return null;
+}
+
+// Returns a task with specified ID, or null if not found
+const getTaskById = function(id) {
+	id = id.toString();
+	for(let list of tasx.board.lists) {
+		for(task of list.tasks) {
+			if(task.taskid.toString() === id) {
+				return task;
+			}
+		}
+	}
+	return null;
+}
 
 /*
 router.get('/:id', (req, res) => {
@@ -100,8 +161,8 @@ router.delete('/:id', (req, res) => {
 });
 */
 
-router.get('/', function(req, res, next) {
-	res.render('index', { title: 'Express' });
-});
+// router.get('/', function(req, res, next) {
+// 	res.render('index', { title: 'Express' });
+// });
 
 module.exports = router;

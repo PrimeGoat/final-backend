@@ -43,7 +43,7 @@ const kanbanBoard = {
 	title: "TASX Management",
 	lists: [
 		{
-			listid: 0,
+			listid: 'TODO',
 			title: "Todo",
 			tasks: [
 				{
@@ -61,7 +61,7 @@ const kanbanBoard = {
 			]
 		},
 		{
-			listid: 3,
+			listid: 'DOING',
 			title: "Doing",
 			tasks: [
 				{
@@ -73,7 +73,7 @@ const kanbanBoard = {
 			]
 		},
 		{
-			listid: 5,
+			listid: 'DONE',
 			title: "Done",
 			tasks: []
 		}

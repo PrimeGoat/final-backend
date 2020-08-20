@@ -2,8 +2,8 @@
 
 /*\
 
-GET /board - Gets entire structure
-PUT /structure - Sends a bare (only IDs) structure.  This is sent whenever anything is moved around
+GET /board - Gets entire layout
+PUT /layout - Sends a bare (only IDs) layout.  This is sent whenever anything is moved around
 PUT /task/:id - Edits a task
 PUT /renameboard - Renames the board
 PUT /renamelist/:listid - Renams a list
@@ -53,6 +53,12 @@ const sendApi = function(command, data = "") {
 				title: data
 			};
 			break;
+		case 'layout':
+			method = 'PUT';
+			tail = 'layout';
+			console.log("Sending layout: ", data);
+			body = data;
+			break;
 		default:
 			console.log("Invalid command: " + command);
 			return;
@@ -81,7 +87,9 @@ const setupSortables = function() {
 		$( ".listBody" ).sortable({
 			connectWith: ".connectedSorts",
 			stop: () => {
-				const structure = getBoardStructure();
+				const layout = getBoardlayout();
+				// Send the new layout to the API
+				sendApi('layout', layout);
 			}
 		}).disableSelection();
 	} );
@@ -89,8 +97,10 @@ const setupSortables = function() {
 	$( () => {
 		$( ".boardBody" ).sortable({
 			axis: 'x',
-			change: () => {
-				const structure = getBoardStructure();
+			stop: () => {
+				const layout = getBoardlayout();
+				// Send the new layout to the API
+				sendApi('layout', layout);
 			}
 		}).disableSelection();
 	} );
@@ -193,9 +203,9 @@ const placeTask = function(lid, name = "New Task", id = "", start = false, start
 }
 
 // Returns the board layout
-const getBoardStructure = function() {
+const getBoardlayout = function() {
 	const lists = document.querySelector('.boardBody').children;
-	const structure = [];
+	const layout = [];
 
 	for(list of lists) {
 		if(list.getAttribute('data-listid') == null) continue;
@@ -211,11 +221,11 @@ const getBoardStructure = function() {
 			entry.tasks.push(task.getAttribute('data-taskid'));
 		}
 
-		structure.push(entry);
+		layout.push(entry);
 	}
 
-	console.log("STRUCTURE: " + JSON.stringify(structure));
-	return structure;
+	console.log("layout: " + JSON.stringify(layout));
+	return layout;
 }
 
 // Creates a unique ID number
@@ -346,7 +356,7 @@ const createTask = function(name = "New Task", start = false, startDate = "", du
 	newTask.removeAttribute("id");
 	newTask.removeAttribute("style");
 	newTask.className = "task";
-	id = (id == "") ? makeId() : id;
+	id = (id === "") ? makeId() : id;
 	newTask.setAttribute("data-taskid", id);
 
 	// Populate task
