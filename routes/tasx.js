@@ -6,9 +6,9 @@ const tasx = require('../models/tasxBoard');
 
 * GET /board - Gets entire layout and content
 * PUT /layout - Sends a bare (only IDs) layout.  This is sent whenever anything is moved around
-PUT /task/:id - Edits a task
+* PUT /updatetask - Edits a task
 * PUT /renameboard - Renames the board
-PUT /renamelist/:listid - Renames a list
+* PUT /renamelist/:listid - Renames a list
 PUSH /newlist - Adds new list to end of lists
 PUSH /newtask/:listid - Adds new task to end of a list
 DELETE /deltask/:taskid - Deletes a task
@@ -31,7 +31,7 @@ router.put('/renameboard', (req, res) => {
 		console.log(`Board renamed to ${title}, sending client confirmation.`);
 		return res.status(200).json({success: true, response: `Board renamed to ${title}`});
 	} else {
-		console.log("Invalid title, sending client rejection.");
+		console.log("Renameboard: Invalid title, sending client rejection.");
 		return res.status(500).json({success: false, response: 'Invalid title'});
 	}
 });
@@ -48,6 +48,21 @@ router.put('/renamelist/:id', (req, res) => {
 	} else {
 		console.log("Invalid parameters, sending client rejection.");
 		return res.status(500).json({success: false, response: 'Invalid parameters.'});
+	}
+});
+
+// PUT /updatetask - Edits a task
+router.put('/updatetask', (req, res) => {
+	console.log(req.body);
+	const currentTaskIndex = getTaskById(req.body.taskid, true);
+	console.log("Index: ", currentTaskIndex);
+
+	if(currentTaskIndex != null) {
+		tasx.board.lists[currentTaskIndex[0]].tasks[currentTaskIndex[1]] = req.body;
+		return res.status(200).json({success: true, response: `Task ${req.body.taskid} updated.`});
+	} else {
+		console.log("Updatetask: Invalid task specified, sending client rejection.")
+		return res.status(500).json({success: false, response: 'Invalid task ID'});
 	}
 });
 
@@ -114,12 +129,15 @@ const getListName = function(id) {
 }
 
 // Returns a task with specified ID, or null if not found
-const getTaskById = function(id) {
+const getTaskById = function(id, index = false) {
+	console.log("Received gettaskbyid request: ", id);
 	id = id.toString();
-	for(let list of tasx.board.lists) {
-		for(task of list.tasks) {
-			if(task.taskid.toString() === id) {
-				return task;
+	for(let i = 0; i < tasx.board.lists.length; i++) {
+		for(let j = 0; j < tasx.board.lists[i].tasks.length; j++) {
+			if(tasx.board.lists[i].tasks[j].taskid.toString() === id) {
+				console.log("Found", i, j);
+				if(index) return [i, j];
+				else return tasx.board.lists[i].tasks[j];
 			}
 		}
 	}

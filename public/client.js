@@ -4,9 +4,9 @@
 
 GET /board - Gets entire layout
 PUT /layout - Sends a bare (only IDs) layout.  This is sent whenever anything is moved around
-PUT /task/:id - Edits a task
+PUT /updatetask - Edits a task
 PUT /renameboard - Renames the board
-PUT /renamelist/:listid - Renams a list
+PUT /renamelist/:listid - Renames a list
 PUSH /newlist - Adds new list to end of lists
 PUSH /newtask/:listid - Adds new task to end of a list
 DELETE /deltask/:taskid - Deletes a task
@@ -19,7 +19,6 @@ var kanbanBoard = {
 	title: "TASX",
 	lists: []
 };
-
 
 // Initial populate: Obtain entire dataset from API
 const getBoard = function() {
@@ -60,6 +59,16 @@ const sendApi = function(command, data = "") {
 				title: data[2]
 			};
 			data = `${data[1]} -> ${data[2]}`;
+			break;
+		case 'updatetask':
+			method = 'PUT';
+			tail = 'updatetask';
+			if(getTaskById(data.taskid) == null) {
+				console.log("Invalid updatetask task.");
+				return null;
+			}
+			body = data;
+			data = `Task ${data.taskid}`;
 			break;
 		case 'layout':
 			method = 'PUT';
@@ -369,12 +378,13 @@ const getListName = function(id) {
 }
 
 // Returns a task with specified ID, or null if not found
-const getTaskById = function(id) {
+const getTaskById = function(id, index = false) {
 	id = id.toString();
-	for(let list of kanbanBoard.lists) {
-		for(task of list.tasks) {
-			if(task.taskid.toString() === id) {
-				return task;
+	for(let i = 0; i < kanbanBoard.lists.length; i++) {
+		for(let j = 0; j < kanbanBoard.lists[i].tasks.length; j++) {
+			if(kanbanBoard.lists[i].tasks[j].taskid.toString() === id) {
+				if(index) return [i, j];
+				else return kanbanBoard.lists[i].tasks[j];
 			}
 		}
 	}
@@ -469,13 +479,42 @@ const checkCheck = function(check, date, initial = false) {
 	else greyOutDate(date);
 
 	if(!initial) {
-		//TODO: Tell API about change
+		updateTask(date.parentElement.parentElement.parentElement);
 	}
 }
 
 // Deals with changes to a task
 const updateTask = function(element) {
-	//TODO: Tell API that task has been updated
+	// Build a new task based on current element and compare with that of object in memory
+	const taskId = element.getAttribute('data-taskid');
+	const currentTaskIndex = getTaskById(taskId, true);
+	const currentTask = kanbanBoard.lists[currentTaskIndex[0]].tasks[currentTaskIndex[1]];
+
+	const DOMtask = {
+		taskid: taskId,
+		title: element.children[0].innerText,
+		startDate: (element.children[2].children[0].children[0].checked) ?
+			element.children[2].children[0].children[2].value : "",
+		dueDate: (element.children[2].children[1].children[0].checked) ?
+			element.children[2].children[1].children[2].value : "",
+	};
+
+	if(tasksDiffer(currentTask, DOMtask)) {
+		// Task has changed.  Send it to API and update object
+		console.log("Tasks differ");
+		kanbanBoard.lists[currentTaskIndex[0]].tasks[currentTaskIndex[1]] = DOMtask;
+		sendApi('updatetask', DOMtask);
+	}
+
+}
+
+// Compares two tasks.  Used to check for changes in a task
+const tasksDiffer = function(task1, task2) {
+	if(task1.title !== task2.title) return true;
+	if(task1.startDate !== task2.startDate) return true;
+	if(task1.dueDate !== task2.dueDate) return true;
+
+	return false;
 }
 
 // Greys out an unchecked date
@@ -517,7 +556,7 @@ const saveTaskEdit = function(element) {
 	textDiv.style.display = 'inline';
 	editDiv.style.display = 'none';
 
-	//TODO: Tell API that task has been edited
+	updateTask(element.parentElement.parentElement);
 }
 
 // Set up event handler for "Add List" button
