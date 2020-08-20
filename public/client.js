@@ -66,6 +66,12 @@ const sendApi = function(command, data = "") {
 			};
 			data = `${data[1]} -> ${data[2]}`;
 			break;
+		case 'newtask':
+			method = 'POST';
+			tail = `newtask/${data[0]}`;
+			body = data[1];
+			data = `List ID ${data[0]}, Task ID ${data[1].taskid}`;
+			break;
 		case 'updatetask':
 			method = 'PUT';
 			tail = 'updatetask';
@@ -214,7 +220,7 @@ const saveBoardEdit = function(element) {
 const placeList = function(name = "New List", id = "", dontSend = false) {
 	const boardBody = document.querySelector("#insertLists");
 	if(boardBody == null) {
-		console.log("Can't find board body");
+		console.log("Can't find board body.");
 		return false;
 	}
 
@@ -223,7 +229,7 @@ const placeList = function(name = "New List", id = "", dontSend = false) {
 }
 
 // Places a new task into a specified list
-const placeTask = function(lid, name = "New Task", id = "", start = false, startDate = "", due = false, dueDate = "") {
+const placeTask = function(lid, name = "New Task", id = "", start = false, startDate = "", due = false, dueDate = "", dontSend = false) {
 	// Task selector: `.listBody > .task[data-taskid='${taskid}']`
 	// List selector: `#insertLists > .list[data-listid='${listid}'] > .listBody`
 
@@ -231,8 +237,22 @@ const placeTask = function(lid, name = "New Task", id = "", start = false, start
 	if(list == null) return false;
 
 	const newTask = createTask(name, start, startDate, due, dueDate, id);
+	id = newTask.getAttribute('data-taskid');
 	list.appendChild(newTask);
-	return true;
+
+	const newTaskObj = {
+		taskid: id,
+		title: name,
+		startDate: startDate,
+		dueDate: dueDate
+	}
+
+	kanbanBoard.lists[getListName(lid, true)].tasks.push(newTaskObj);
+
+	// Tell the API that we have a new task added
+	if(!dontSend) sendApi('newtask', [lid, newTaskObj]);
+
+	return newTask;
 }
 
 // Returns the board layout
@@ -330,7 +350,6 @@ const createList = function(name = "New List", id = "", dontSend = false) {
 		title: name,
 		tasks: []
 	});
-	console.log(kanbanBoard.lists);
 
 	// Tell the API that we have a new list added
 	if(!dontSend) sendApi('newlist', {listid: id, title: name, tasks: []});
@@ -381,8 +400,6 @@ const saveListEdit = function(element) {
 		console.log("Value changed.");
 		setListName(listId, editText.value);
 		sendApi('renamelist', [listId, oldName, editText.value]);
-	} else {
-		console.log("Value did not change.");
 	}
 }
 
@@ -400,10 +417,13 @@ const setListName = function(id, newName) {
 }
 
 // Returns the name of the list with specified ID, or null if not found
-const getListName = function(id) {
+const getListName = function(id, index = false) {
 	id = id.toString();
-	for(let list of kanbanBoard.lists)
-		if(list.listid.toString() === id) return list.title;
+	for(let i = 0; i < kanbanBoard.lists.length; i++)
+		if(kanbanBoard.lists[i].listid.toString() === id) {
+			if(index) return i;
+			else return kanbanBoard.lists[i].title;
+		}
 	return null;
 }
 
@@ -423,11 +443,13 @@ const getTaskById = function(id, index = false) {
 
 // Event handler for "Add Task" button
 const addTask = function(event) {
-	const list = event.target.parentElement.parentElement.children[1];
-	const newTask = createTask()
-	list.appendChild(newTask);
-	const taskName = newTask.children[0];
-	taskName.dispatchEvent(new Event("click"));
+	const listId = event.target.parentElement.parentElement.getAttribute('data-listid');
+
+	const newTask = placeTask(listId);
+	//const newTask = createTask()
+	//list.appendChild(newTask);
+
+	newTask.children[0].dispatchEvent(new Event("click"));
 }
 
 // Event handler for "Add List" button
@@ -490,8 +512,6 @@ const createTask = function(name = "New Task", start = false, startDate = "", du
 	deleteButton.addEventListener("click", () => {
 		deleteTask(newTask, id);
 	});
-
-	//TODO: Tell API that new task has been created
 
 	return newTask;
 }

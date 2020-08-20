@@ -10,7 +10,7 @@ const tasx = require('../models/tasxBoard');
 * PUT /renameboard - Renames the board
 * PUT /renamelist/:listid - Renames a list
 * PUSH /newlist - Adds new list to end of lists
-PUSH /newtask/:listid - Adds new task to end of a list
+* PUSH /newtask/:listid - Adds new task to end of a list
 DELETE /deltask/:taskid - Deletes a task
 DELETE /dellist/:listid - Deletes a list and all of its tasks
 
@@ -58,6 +58,16 @@ router.put('/renamelist/:id', (req, res) => {
 		console.log("Invalid parameters, sending client rejection.");
 		return res.status(500).json({success: false, response: 'Invalid parameters.'});
 	}
+});
+
+// PUSH /newtask/:listid - Adds new task to end of a list
+router.post('/newtask/:listid', (req, res) => {
+	const listIndex = getListName(req.params.listid, true);
+	if(!req.body.taskid || !req.body.title || listIndex === null) return res.status(500).json({success: false, response: 'Newtask: Invalid parameters.'});
+
+	tasx.board.lists[listIndex].tasks.push(req.body);
+
+	return res.status(200).json({success: true, response: 'New task added.'});
 });
 
 // PUT /updatetask - Edits a task
@@ -129,10 +139,13 @@ const setListName = function(id, newName) {
 }
 
 // Returns the name of the list with specified ID, or null if not found
-const getListName = function(id) {
+const getListName = function(id, index = false) {
 	id = id.toString();
-	for(let list of tasx.board.lists)
-		if(list.listid.toString() === id) return list.title;
+	for(let i = 0; i < tasx.board.lists.length; i++)
+		if(tasx.board.lists[i].listid.toString() === id) {
+			if(index) return i;
+			else return tasx.board.lists[i].title;
+		}
 	return null;
 }
 
