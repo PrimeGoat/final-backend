@@ -36,6 +36,21 @@ router.put('/renameboard', (req, res) => {
 	}
 });
 
+// PUT /renamelist - Renames a list
+router.put('/renamelist/:id', (req, res) => {
+	const title = req.body.title.trim();
+	const oldName = getListName(req.params.id);
+	console.log("Rename list request received: ", title);
+	if(title != "" && oldName != null) {
+		setListName(req.params.id, title);
+		console.log(`List renamed: ${oldName} -> ${title}, sending client confirmation.`);
+		return res.status(200).json({success: true, response: `List renamed: ${oldName} -> ${title}`});
+	} else {
+		console.log("Invalid parameters, sending client rejection.");
+		return res.status(500).json({success: false, response: 'Invalid parameters.'});
+	}
+});
+
 //  [
 //   { listid: 'DOING', tasks: [ '4' ] },
 //   { listid: 'TODO', tasks: [ '1', '2' ] },
@@ -77,10 +92,24 @@ router.put('/layout', (req, res) => {
 	return res.status(200).json({success: true, response: 'New layout saved.'});
 });
 
+// Sets the name of the list with specified ID, or null if not found
+const setListName = function(id, newName) {
+	id = id.toString();
+
+	for(let i = 0; i < tasx.board.lists.length; i++)
+		if(tasx.board.lists[i].listid.toString() === id) {
+			tasx.board.lists[i].title = newName;
+			return true;
+		}
+
+	return null;
+}
+
 // Returns the name of the list with specified ID, or null if not found
 const getListName = function(id) {
+	id = id.toString();
 	for(let list of tasx.board.lists)
-		if(list.listid === id) return list.title;
+		if(list.listid.toString() === id) return list.title;
 	return null;
 }
 
@@ -161,8 +190,8 @@ router.delete('/:id', (req, res) => {
 });
 */
 
-// router.get('/', function(req, res, next) {
-// 	res.render('index', { title: 'Express' });
-// });
+router.get('/', function(req, res, next) {
+	res.render('index', { title: 'Express' });
+});
 
 module.exports = router;

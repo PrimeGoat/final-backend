@@ -53,6 +53,14 @@ const sendApi = function(command, data = "") {
 				title: data
 			};
 			break;
+		case 'renamelist':
+			method = 'PUT';
+			tail = `renamelist/${data[0]}`;
+			body = {
+				title: data[2]
+			};
+			data = `${data[1]} -> ${data[2]}`;
+			break;
 		case 'layout':
 			method = 'PUT';
 			tail = 'layout';
@@ -320,13 +328,57 @@ const saveListEdit = function(element) {
 	const editText = element;
 	const editDiv = element.parentElement;
 	const textDiv = element.parentElement.parentElement.children[0];
+	editText.value = editText.value.trim();
 
-	if(editText.value.trim() == "") editText.value = "[Enter title]";
+	if(editText.value == "") editText.value = "[Enter title]";
 	textDiv.innerText = editText.value;
 	textDiv.style.display = 'inline';
 	editDiv.style.display = 'none';
 
-	//TODO: Tell API that list has been renamed
+	const listId = element.parentElement.parentElement.parentElement.getAttribute('data-listid');
+	const oldName = getListName(listId);
+	if(editText.value != oldName) {
+		// Value has changed.  Send it to API and update object.
+		console.log("Value changed.");
+		setListName(listId, editText.value);
+		sendApi('renamelist', [listId, oldName, editText.value]);
+	} else {
+		console.log("Value did not change.");
+	}
+}
+
+// Sets the name of the list with specified ID, or null if not found
+const setListName = function(id, newName) {
+	id = id.toString();
+
+	for(let i = 0; i < kanbanBoard.lists.length; i++)
+		if(kanbanBoard.lists[i].listid.toString() === id) {
+			kanbanBoard.lists[i].title = newName;
+			return true;
+		}
+
+	return null;
+}
+
+// Returns the name of the list with specified ID, or null if not found
+const getListName = function(id) {
+	id = id.toString();
+	for(let list of kanbanBoard.lists)
+		if(list.listid.toString() === id) return list.title;
+	return null;
+}
+
+// Returns a task with specified ID, or null if not found
+const getTaskById = function(id) {
+	id = id.toString();
+	for(let list of kanbanBoard.lists) {
+		for(task of list.tasks) {
+			if(task.taskid.toString() === id) {
+				return task;
+			}
+		}
+	}
+	return null;
 }
 
 // Event handler for "Add Task" button
