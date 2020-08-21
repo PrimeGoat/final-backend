@@ -11,8 +11,8 @@ const tasx = require('../models/tasxBoard');
 * PUT /renamelist/:listid - Renames a list
 * PUSH /newlist - Adds new list to end of lists
 * PUSH /newtask/:listid - Adds new task to end of a list
-DELETE /deltask/:taskid - Deletes a task
-DELETE /dellist/:listid - Deletes a list and all of its tasks
+* DELETE /deltask/:taskid - Deletes a task
+* DELETE /dellist/:listid - Deletes a list and all of its tasks
 
 \*/
 
@@ -60,6 +60,25 @@ router.put('/renamelist/:id', (req, res) => {
 	}
 });
 
+// DELETE /dellist/:listid - Deletes a list
+router.delete('/dellist/:listid', (req, res) => {
+	const index = getListName(req.params.listid, true);
+	const name = tasx.board.lists[index].title;
+
+	console.log("Delete list: ", index, name);
+
+	if(name === null) {
+		console.log("Delete list: Invalid list, sending client rejection.");
+		return res.status(500).json({success: false, response: 'Delete list: Invalid list.'});
+	}
+
+	tasx.board.lists.splice(index, 1);
+
+	console.log(`Task deleted: ID ${req.params.listid}, name ${name}.`);
+	return res.status(200).json({success: true, response: `Task deleted: ID ${req.params.listid}, name ${name}.`});
+});
+
+
 // PUSH /newtask/:listid - Adds new task to end of a list
 router.post('/newtask/:listid', (req, res) => {
 	const listIndex = getListName(req.params.listid, true);
@@ -72,9 +91,7 @@ router.post('/newtask/:listid', (req, res) => {
 
 // PUT /updatetask - Edits a task
 router.put('/updatetask', (req, res) => {
-	console.log(req.body);
 	const currentTaskIndex = getTaskById(req.body.taskid, true);
-	console.log("Index: ", currentTaskIndex);
 
 	if(currentTaskIndex != null) {
 		tasx.board.lists[currentTaskIndex[0]].tasks[currentTaskIndex[1]] = req.body;
@@ -83,6 +100,24 @@ router.put('/updatetask', (req, res) => {
 		console.log("Updatetask: Invalid task specified, sending client rejection.")
 		return res.status(500).json({success: false, response: 'Invalid task ID'});
 	}
+});
+
+// DELETE /deltask/:taskid - Deletes a task
+router.delete('/deltask/:taskid', (req, res) => {
+	const indexes = getTaskById(req.params.taskid, true);
+	const name = getTaskById(req.params.taskid).title;
+
+	console.log("Delete task: ", indexes, name);
+
+	if(name === null) {
+		console.log("Delete task: Invalid task, sending client rejection.");
+		return res.status(500).json({success: false, response: 'Delete task: Invalid task.'});
+	}
+
+	tasx.board.lists[indexes[0]].tasks.splice(indexes[1], 1);
+
+	console.log(`Task deleted: ID ${req.params.taskid}, name ${name}.`);
+	return res.status(200).json({success: true, response: `Task deleted: ID ${req.params.taskid}, name ${name}.`});
 });
 
 //  [
@@ -108,7 +143,6 @@ router.put('/layout', (req, res) => {
 			tasks: []
 		};
 
-		console.log("Processing tasks: ", req.body[i].tasks);
 		for(task of req.body[i].tasks) {
 			let taskName = getTaskById(task);
 			if(taskName == null) {
@@ -116,7 +150,6 @@ router.put('/layout', (req, res) => {
 			}
 			entry.tasks.push(taskName);
 		}
-		console.log("Entry built: ", entry);
 		newLists.push(entry);
 	}
 
@@ -149,14 +182,16 @@ const getListName = function(id, index = false) {
 	return null;
 }
 
+const wtf = function(hey) {
+	console.log(hey);
+}
+
 // Returns a task with specified ID, or null if not found
 const getTaskById = function(id, index = false) {
-	console.log("Received gettaskbyid request: ", id);
 	id = id.toString();
 	for(let i = 0; i < tasx.board.lists.length; i++) {
 		for(let j = 0; j < tasx.board.lists[i].tasks.length; j++) {
 			if(tasx.board.lists[i].tasks[j].taskid.toString() === id) {
-				console.log("Found", i, j);
 				if(index) return [i, j];
 				else return tasx.board.lists[i].tasks[j];
 			}

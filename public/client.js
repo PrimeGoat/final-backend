@@ -66,6 +66,11 @@ const sendApi = function(command, data = "") {
 			};
 			data = `${data[1]} -> ${data[2]}`;
 			break;
+		case 'dellist':
+			method = 'DELETE';
+			tail = `dellist/${data[0]}`;
+			data = `List ID ${data[0]}, List name ${data[1]}.`;
+			break;
 		case 'newtask':
 			method = 'POST';
 			tail = `newtask/${data[0]}`;
@@ -81,6 +86,11 @@ const sendApi = function(command, data = "") {
 			}
 			body = data;
 			data = `Task ${data.taskid}`;
+			break;
+		case 'deltask':
+			method = 'DELETE';
+			tail = `deltask/${data[0]}`;
+			data = `Task ID ${data[0]}, Task name ${data[1]}.`;
 			break;
 		case 'layout':
 			method = 'PUT';
@@ -363,8 +373,15 @@ const deleteList = function(element, id) {
 
 	element.remove();
 
-	//TODO: Tell API that list was removed
+	const index = getListName(id, true);
+	const name = getListName(id);
+
+	kanbanBoard.lists.splice(index, 1);
+	console.log(kanbanBoard.lists, index);
+
 	console.log("List ID " + id + " has been removed.");
+
+	sendApi('dellist', [id, name]);
 }
 
 // Event handler for list title editing: Entering editing mode
@@ -520,7 +537,10 @@ const createTask = function(name = "New Task", start = false, startDate = "", du
 const deleteTask = function(element, id) {
 	element.remove();
 
-	//TODO: Tell API that task was removed
+	const indexes = getTaskById(id, true);
+	const name = getTaskById(id).title;
+	kanbanBoard.lists[indexes[0]].tasks.splice(indexes[1], 1);
+	sendApi('deltask', [id, name]);
 }
 
 // Checks the status of a checkbox and takes appropriate measures
