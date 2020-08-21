@@ -1,19 +1,10 @@
-// API
-
-/*\
-
-GET /board - Gets entire layout
-PUT /layout - Sends a bare (only IDs) layout.  This is sent whenever anything is moved around
-PUT /updatetask - Edits a task
-PUT /renameboard - Renames the board
-PUT /renamelist/:listid - Renames a list
-PUSH /newlist - Adds new list to end of lists
-PUSH /newtask/:listid - Adds new task to end of a list
-DELETE /deltask/:taskid - Deletes a task
-DELETE /dellist/:listid - Deletes a list and all of its tasks
-
-\*/
-
+/*V*\
+| X  \
+| X |\\
+| X | |>  Browser-side TASX MANAGER front-end code.
+| X |//
+| X  /      - Denis Savgir
+\*A*/
 
 var kanbanBoard = {
 	title: "TASX",
@@ -40,25 +31,23 @@ const getBoard = function() {
 
 // Send API command: All API interaction done through here
 const sendApi = function(command, data = "") {
-	const request = new XMLHttpRequest();
-
 	let tail, body;
 
 	switch(command) {
-		case 'renameBoard':
+		case 'renameBoard':	// Rename the board
 			method = 'PUT';
 			tail = 'renameboard';
 			body = {
 				title: data
 			};
 			break;
-		case 'newlist':
+		case 'newlist':			// Add a new list
 			method = 'POST';
 			tail = 'newlist';
 			body = data;
 			data = `List ID ${data.listid}`;
 			break;
-		case 'renamelist':
+		case 'renamelist':		// Rename a list
 			method = 'PUT';
 			tail = `renamelist/${data[0]}`;
 			body = {
@@ -66,18 +55,18 @@ const sendApi = function(command, data = "") {
 			};
 			data = `${data[1]} -> ${data[2]}`;
 			break;
-		case 'dellist':
+		case 'dellist':			// Delete a list
 			method = 'DELETE';
 			tail = `dellist/${data[0]}`;
 			data = `List ID ${data[0]}, List name ${data[1]}.`;
 			break;
-		case 'newtask':
+		case 'newtask':			// Create new task
 			method = 'POST';
 			tail = `newtask/${data[0]}`;
 			body = data[1];
 			data = `List ID ${data[0]}, Task ID ${data[1].taskid}`;
 			break;
-		case 'updatetask':
+		case 'updatetask':		// Update a task
 			method = 'PUT';
 			tail = 'updatetask';
 			if(getTaskById(data.taskid) == null) {
@@ -87,12 +76,12 @@ const sendApi = function(command, data = "") {
 			body = data;
 			data = `Task ${data.taskid}`;
 			break;
-		case 'deltask':
+		case 'deltask':			// Delete a task
 			method = 'DELETE';
 			tail = `deltask/${data[0]}`;
 			data = `Task ID ${data[0]}, Task name ${data[1]}.`;
 			break;
-		case 'layout':
+		case 'layout':			// Update layout
 			method = 'PUT';
 			tail = 'layout';
 			console.log("Sending layout: ", data);
@@ -103,10 +92,11 @@ const sendApi = function(command, data = "") {
 			return;
 	}
 
+	// Set up AJAX connection
+	const request = new XMLHttpRequest();
 	request.open(method, 'http://localhost:3000/api/v1/' + tail);
 	request.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
 	request.onreadystatechange = () => {
-		//console.log(request.readyState, request.status);
 		if(request.readyState === 4 && request.status === 200) {
 			const response = JSON.parse(request.responseText);
 			if(response.success) {
@@ -122,6 +112,7 @@ const sendApi = function(command, data = "") {
 
 // Sets up jQuery's sortable feature to allow for rearranging of lists and tasks
 const setupSortables = function() {
+	// Tasks
 	$( () => {
 		$( ".listBody" ).sortable({
 			connectWith: ".connectedSorts",
@@ -133,6 +124,7 @@ const setupSortables = function() {
 		}).disableSelection();
 	} );
 
+	// Lists (horizontal only)
 	$( () => {
 		$( ".boardBody" ).sortable({
 			axis: 'x',
@@ -184,8 +176,10 @@ const boardNaming = function() {
 	const boardTitle = document.getElementById("boardTitle");
 	const boardTitleEdit = document.getElementById("boardEdit");
 
+	// Start editing
 	boardTitle.addEventListener('click', editBoard);
 
+	// End editing
 	boardTitleEdit.addEventListener('keyup', (event) => {
 		if(event.key == 'Enter' || event.key == 'Escape') {
 			saveBoardEdit(event.target);
@@ -243,13 +237,16 @@ const placeTask = function(lid, name = "New Task", id = "", start = false, start
 	// Task selector: `.listBody > .task[data-taskid='${taskid}']`
 	// List selector: `#insertLists > .list[data-listid='${listid}'] > .listBody`
 
+	// Find the list body of the list whose listid matches the specified listid
 	const list = document.querySelector(`#insertLists > .list[data-listid='${lid}'] > .listBody`);
 	if(list == null) return false;
 
+	// Create a new task and append it to the list
 	const newTask = createTask(name, start, startDate, due, dueDate, id);
 	id = newTask.getAttribute('data-taskid');
 	list.appendChild(newTask);
 
+	// Create a new task object to add it to our board db
 	const newTaskObj = {
 		taskid: id,
 		title: name,
@@ -257,6 +254,7 @@ const placeTask = function(lid, name = "New Task", id = "", start = false, start
 		dueDate: dueDate
 	}
 
+	// Add the object to the db
 	kanbanBoard.lists[getListName(lid, true)].tasks.push(newTaskObj);
 
 	// Tell the API that we have a new task added
@@ -268,11 +266,13 @@ const placeTask = function(lid, name = "New Task", id = "", start = false, start
 // Returns the board layout
 const getBoardlayout = function() {
 	const lists = document.querySelector('.boardBody').children;
-	const layout = [];
+	const layout = []; // Build a layout from scratch
 
+	// Go through each list and find its tasks
 	for(list of lists) {
 		if(list.getAttribute('data-listid') == null) continue;
 
+		// Build a list object
 		const entry = {
 			listid: list.getAttribute('data-listid'),
 			tasks: []
@@ -280,10 +280,12 @@ const getBoardlayout = function() {
 
 		const tasks = list.children[1].children;
 
+		// Go through each task and add its taskid to the list object
 		for(task of tasks) {
 			entry.tasks.push(task.getAttribute('data-taskid'));
 		}
 
+		// Add the list object to the layout object
 		layout.push(entry);
 	}
 
@@ -295,20 +297,17 @@ const getBoardlayout = function() {
 const makeId = function() {
 	let id;
 
-	do {
+	do { // Keep generating random numbers until we find one that isn't in use (just in case)
 		id = Math.floor(Math.random() * (99999 - 11111) + 11111);
-	} while(idExists(id));
+	} while(((id) => {
+		for(list of kanbanBoard.lists) {
+			if(list.listid == id) return true;
+			for(task of list.tasks)
+				if(task.taskid == id) return true;
+		}
+		return false;
+	})(id));
 	return id;
-}
-
-// Checks to see if ID number is already in use
-const idExists = function(id) {
-	for(list of kanbanBoard.lists) {
-		if(list.listid == id) return true;
-		for(task of list.tasks)
-			if(task.taskid == id) return true;
-	}
-	return false;
 }
 
 // Creates a new list element
@@ -319,6 +318,7 @@ const createList = function(name = "New List", id = "", dontSend = false) {
 		throw "Attempted to create a list with an ID that already exists: " + id;
 	}
 
+	// Use the template to create a new list
 	const listTemplate = document.getElementById("listTemplate");
 
 	// Create list
@@ -349,6 +349,7 @@ const createList = function(name = "New List", id = "", dontSend = false) {
 	const addTaskButton = newList.children[2].children[0];
 	addTaskButton.addEventListener('click', addTask);
 
+	// Delete List Button
 	const deleteListButton = newList.children[2].children[1];
 	deleteListButton.addEventListener("click", () => {
 		deleteList(newList, id);
@@ -405,6 +406,7 @@ const saveListEdit = function(element) {
 	const textDiv = element.parentElement.parentElement.children[0];
 	editText.value = editText.value.trim();
 
+	// Avoid blank titles
 	if(editText.value == "") editText.value = "[Enter title]";
 	textDiv.innerText = editText.value;
 	textDiv.style.display = 'inline';
@@ -494,18 +496,22 @@ const createTask = function(name = "New Task", start = false, startDate = "", du
 	const taskName = newTask.children[0];
 	taskName.innerText = name;
 
+	// Start Checkbox
 	const nodeStartCheck = newTask.children[2].children[0].children[0];
 	nodeStartCheck.checked = start;
 
+	// Start Date
 	const nodeStartDate = newTask.children[2].children[0].children[2];
 	nodeStartDate.value = startDate;
 	nodeStartDate.addEventListener("change", () => updateTask(newTask));
 	nodeStartCheck.addEventListener("change", () => checkCheck(nodeStartCheck, nodeStartDate));
 	checkCheck(nodeStartCheck, nodeStartDate, true);
 
+	// Due Checkbox
 	const nodeDueCheck = newTask.children[2].children[1].children[0];
 	nodeDueCheck.checked = due;
 
+	// Due Date
 	const nodeDueDate = newTask.children[2].children[1].children[2];
 	nodeDueDate.value = dueDate;
 	nodeDueDate.addEventListener("change", () => updateTask(newTask));
@@ -560,6 +566,7 @@ const updateTask = function(element) {
 	const currentTaskIndex = getTaskById(taskId, true);
 	const currentTask = kanbanBoard.lists[currentTaskIndex[0]].tasks[currentTaskIndex[1]];
 
+	// Build a task object based on the DOM task's properties
 	const DOMtask = {
 		taskid: taskId,
 		title: element.children[0].innerText,
@@ -569,6 +576,7 @@ const updateTask = function(element) {
 					element.children[2].children[1].children[2].value : "",
 	};
 
+	// Compare db and DOM
 	if(currentTask.title			!== DOMtask.title
 		|| currentTask.startDate	!== DOMtask.startDate
 		|| currentTask.dueDate		!== DOMtask.dueDate) {
