@@ -21,7 +21,6 @@ const populateDB = function() {
 	newList.tasks = [newTask];
 	newList.save();
 }
-//populateDB();
 
 const nameBoard = function() {
 	console.log("NAMING BOARD WTF");
@@ -29,7 +28,8 @@ const nameBoard = function() {
 	board.boardName = "TASX Management";
 	board.save();
 }
-//nameBoard();
+//populateDB();nameBoard();
+
 
 /*\  ROUTES  /*\
 
