@@ -15,7 +15,7 @@ var kanbanBoard = {
 const getBoard = function() {
 	const request = new XMLHttpRequest();
 
-	request.open('GET', 'https://tasx-backend.herokuapp.com/api/v1/board');
+	request.open('GET', getSysUrl() + '/api/v1/board');
 
 	request.onreadystatechange = () => {
 		if(request.readyState === 4 && request.status === 200) {
@@ -27,6 +27,13 @@ const getBoard = function() {
 	}
 
 	request.send();
+}
+
+const getSysUrl = () => {
+	console.log(process.env.USERDOMAIN);
+	//if(process.env.USERDOMAIN == "FLEXBOOX") return 'http://localhost:3000/'
+	if(location.hostname == 'localhost') return 'http://localhost:3000';
+	else return 'https://tasx-backend.herokuapp.com';
 }
 
 // Send API command: All API interaction done through here
@@ -94,7 +101,7 @@ const sendApi = function(command, data = "") {
 
 	// Set up AJAX connection
 	const request = new XMLHttpRequest();
-	request.open(method, 'https://tasx-backend.herokuapp.com/api/v1/' + tail);
+	request.open(method, getSysUrl() + '/api/v1/' + tail);
 	request.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
 	request.onreadystatechange = () => {
 		if(request.readyState === 4 && request.status === 200) {
