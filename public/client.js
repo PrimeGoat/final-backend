@@ -15,7 +15,7 @@ var kanbanBoard = {
 const getBoard = function() {
 	const request = new XMLHttpRequest();
 
-	request.open('GET', 'http://localhost:3000/api/v1/board');
+	request.open('GET', 'https://tasx-backend.herokuapp.com/api/v1/board');
 
 	request.onreadystatechange = () => {
 		if(request.readyState === 4 && request.status === 200) {
@@ -94,7 +94,7 @@ const sendApi = function(command, data = "") {
 
 	// Set up AJAX connection
 	const request = new XMLHttpRequest();
-	request.open(method, 'http://localhost:3000/api/v1/' + tail);
+	request.open(method, 'https://tasx-backend.herokuapp.com/api/v1/' + tail);
 	request.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
 	request.onreadystatechange = () => {
 		if(request.readyState === 4 && request.status === 200) {
