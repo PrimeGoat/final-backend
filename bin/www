@@ -26,6 +26,8 @@ const server = http.createServer(app);
  */
 
 server.listen(port);
+const cors = require('cors');
+app.use(cors());
 server.on('error', onError);
 server.on('listening', onListening);
 
