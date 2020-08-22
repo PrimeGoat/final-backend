@@ -1,9 +1,9 @@
 /*V*\
-| X  \
+| X	\
 | X |\\
-| X | |>  Browser-side TASX MANAGER front-end code.
+| X | |>	Browser-side TASX MANAGER front-end code.
 | X |//
-| X  /      - Denis Savgir
+| X	/			- Denis Savgir
 \*A*/
 
 var kanbanBoard = {
@@ -111,6 +111,87 @@ const sendApi = function(command, data = "") {
 }
 
 // Sets up jQuery's sortable feature to allow for rearranging of lists and tasks
+const setupMovables = function() {
+	// Tasks
+	$(".listBody").sortable({
+		placeholder: 'task-placeholder',
+		connectWith: ".connectedSorts",
+		revert: 150,
+		start: function(e, ui){
+
+			placeholderHeight = ui.item.outerHeight();
+			ui.placeholder.height(placeholderHeight + 15);
+			$('<div class="task-placeholder-animator" data-height="' + placeholderHeight + '"></div>').insertAfter(ui.placeholder);
+
+		},
+
+		change: function(event, ui) {
+
+			ui.placeholder.stop().height(0).animate({
+				height: ui.item.outerHeight() + 15
+			}, 300);
+
+			placeholderAnimatorHeight = parseInt($(".task-placeholder-animator").attr("data-height"));
+
+			$(".task-placeholder-animator").stop().height(placeholderAnimatorHeight + 15).animate({
+				height: 0
+			}, 300, function() {
+				$(this).remove();
+				placeholderHeight = ui.item.outerHeight();
+				$('<div class="task-placeholder-animator" data-height="' + placeholderHeight + '"></div>').insertAfter(ui.placeholder);
+			});
+
+		},
+
+		stop: function(e, ui) {
+			$(".task-placeholder-animator").remove();
+			const layout = getBoardlayout();
+			// Send the new layout to the API
+			sendApi('layout', layout);
+		}
+	}).disableSelection();
+
+	// Lists (horizontal only)
+	$(".boardBody").sortable({
+		placeholder: 'list-placeholder',
+		axis: 'x',
+		revert: 150,
+		start: function(e, ui){
+
+			placeholderWidth = ui.item.outerWidth();
+			ui.placeholder.width(placeholderWidth + 15);
+			$('<div class="list-placeholder-animator" data-width="' + placeholderWidth + '"></div>').insertAfter(ui.placeholder);
+
+		},
+
+		change: function(event, ui) {
+
+			ui.placeholder.stop().width(0).animate({
+				width: ui.item.outerWidth() + 15
+			}, 300);
+
+			placeholderAnimatorWidth = parseInt($(".list-placeholder-animator").attr("data-width"));
+
+			$(".list-placeholder-animator").stop().width(placeholderAnimatorWidth + 15).animate({
+				width: 0
+			}, 300, function() {
+				$(this).remove();
+				placeholderWidth = ui.item.outerWidth();
+				$('<div class="list-placeholder-animator" data-width="' + placeholderWidth + '"></div>').insertAfter(ui.placeholder);
+			});
+
+		},
+
+		stop: function(e, ui) {
+			$(".list-placeholder-animator").remove();
+			const layout = getBoardlayout();
+			// Send the new layout to the API
+			sendApi('layout', layout);
+		}
+	}).disableSelection();
+}
+
+// Sets up jQuery's sortable feature to allow for rearranging of lists and tasks
 const setupSortables = function() {
 	// Tasks
 	$( () => {
@@ -168,7 +249,8 @@ const populateBoard = function(board) {
 			placeTask(list.listid, task.title, task.taskid, task.startDate != "", task.startDate, task.dueDate != "", task.dueDate, true);
 		}
 	}
-	setupSortables();
+	//setupSortables();
+	setupMovables();
 }
 
 // Sets up events to allow for the renaming of the board
@@ -214,13 +296,13 @@ const saveBoardEdit = function(element) {
 	edit.style.display = 'none';
 
 	if(edit.value != kanbanBoard.title) {
-		// Value has changed.  Send it to API and update object
+		// Value has changed.	Send it to API and update object
 		kanbanBoard.title = edit.value;
 		sendApi('renameBoard', edit.value);
 	}
 }
 
-//  Places a new list onto the board
+//	Places a new list onto the board
 const placeList = function(name = "New List", id = "", dontSend = false) {
 	const boardBody = document.querySelector("#insertLists");
 	if(boardBody == null) {
@@ -415,7 +497,7 @@ const saveListEdit = function(element) {
 	const listId = element.parentElement.parentElement.parentElement.getAttribute('data-listid');
 	const oldName = getListName(listId);
 	if(editText.value != oldName) {
-		// Value has changed.  Send it to API and update object.
+		// Value has changed.	Send it to API and update object.
 		console.log("Value changed.");
 		setListName(listId, editText.value);
 		sendApi('renamelist', [listId, oldName, editText.value]);
@@ -477,7 +559,8 @@ const addList = function(event) {
 
 	const newList = createList("New List");
 	boardBody.appendChild(newList);
-	setupSortables();
+	//setupSortables();
+	setupMovables();
 	const listName = newList.children[0].children[0];
 	listName.dispatchEvent(new Event("click"));
 }
@@ -572,7 +655,7 @@ const updateTask = function(element) {
 		title: element.children[0].innerText,
 		startDate: (element.children[2].children[0].children[0].checked) ?
 					element.children[2].children[0].children[2].value : "",
-		dueDate:   (element.children[2].children[1].children[0].checked) ?
+		dueDate:	 (element.children[2].children[1].children[0].checked) ?
 					element.children[2].children[1].children[2].value : "",
 	};
 
@@ -580,15 +663,15 @@ const updateTask = function(element) {
 	if(currentTask.title			!== DOMtask.title
 		|| currentTask.startDate	!== DOMtask.startDate
 		|| currentTask.dueDate		!== DOMtask.dueDate) {
-		// Task has changed.  Send it to API and update object
+		// Task has changed.	Send it to API and update object
 		console.log("Tasks differ");
 		kanbanBoard.lists[currentTaskIndex[0]].tasks[currentTaskIndex[1]] = DOMtask;
 		sendApi('updatetask', DOMtask);
 	}
 }
 
-// Below function is no longer used, it was turned into a long if statement above.  Keeping it just in case.
-// Compares two tasks.  Used to check for changes in a task
+// Below function is no longer used, it was turned into a long if statement above.	Keeping it just in case.
+// Compares two tasks.	Used to check for changes in a task
 const tasksDiffer = function(task1, task2) {
 	if(task1.title !== task2.title) return true;
 	if(task1.startDate !== task2.startDate) return true;
@@ -611,7 +694,7 @@ const unGreyDate = function(element) {
 	element.removeAttribute("disabled");
 }
 
-// Event handler for task title editing:  Entering editing mode
+// Event handler for task title editing:	Entering editing mode
 function editTask(event) {
 	const text = event.target.innerText;
 
