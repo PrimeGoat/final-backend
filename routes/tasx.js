@@ -1,6 +1,35 @@
 const express = require('express');
 const router = express.Router();
 const tasx = require('../models/tasxBoard');
+const Task = require('../models/Task');
+const List = require('../models/List');
+const Board = require('../models/Board');
+
+// Initial population of DB
+const populateDB = function() {
+	let newList = new List();
+	let newTask = new Task();
+
+	newTask.taskid = 234;
+	newTask.title = "Test Task";
+	newTask.startDate = "2020-04-20";
+	newTask.dueDate = "3000-04-20";
+	newTask.save();
+
+	newList.listid = 123;
+	newList.title = "Test List";
+	newList.tasks = [newTask];
+	newList.save();
+}
+//populateDB();
+
+const nameBoard = function() {
+	console.log("NAMING BOARD WTF");
+	const board = new Board();
+	board.boardName = "TASX Management";
+	board.save();
+}
+//nameBoard();
 
 /*\  ROUTES  /*\
 
@@ -19,46 +48,135 @@ const tasx = require('../models/tasxBoard');
 // GET /board - Gets entire layout and content
 router.get('/board', (req, res) => {
 	console.log(JSON.stringify(tasx.board));
-	return res.status(200).json(tasx.board);
+	getBoard(req, res);
 });
+
+// Gets lists from DB and sends to browser.
+const getBoard = async function(req, res) {
+	// Create a blank board
+	const fullBoard = {
+		title: '',
+		lists: []
+	}
+
+	const board = await Board.findOne({});
+	fullBoard.title = board.boardName;
+
+	// Iterate through DB's lists
+	const lists = await List.find({})
+	for(list of lists) {
+		console.log("List: ", list);
+		const currentList = {
+			listid: list.listid,
+			title: list.title,
+			tasks: []
+		};
+
+		// Iterate through DB's tasks for this list
+		for(task of list.tasks) {
+			task = await Task.find({_id: task});
+
+			const currentTask = {
+				taskid: task.taskid,
+				title: task.title,
+				startDate: task.startDate,
+				dueDate: task.dueDate
+			}
+			currentList.tasks.push(currentTask);
+		}
+		fullBoard.lists.push(currentList);
+	}
+
+	// Send the board to the browser
+	return res.status(200).json(fullBoard);
+}
 
 // PUT /renameboard - Renames the board
 router.put('/renameboard', (req, res) => {
+	renameBoardDB(req, res);
+});
+
+const renameBoardDB = async function(req, res) {
 	const title = req.body.title.trim();
 	console.log("Rename board request received: ", title);
 	if(title != "") {
-		tasx.board.title = title;
+		//tasx.board.title = title;
+		const board = await Board.findOne({});
+		board.boardName = title;
+		await board.save();
 		console.log(`Board renamed to ${title}, sending client confirmation.`);
 		return res.status(200).json({success: true, response: `Board renamed to ${title}`});
 	} else {
 		console.log("Renameboard: Invalid title, sending client rejection.");
 		return res.status(500).json({success: false, response: 'Invalid title'});
 	}
-});
+}
+
 
 // PUSH /newlist - Adds new list to end of lists
 router.post('/newlist', (req, res) => {
 	if(!req.body.listid || !req.body.title) return res.status(500).json({success: false, response: 'Newlist: Invalid list parameters.'});
 
 	tasx.board.lists.push(req.body);
+	addListDB(req, res);
+});
+
+// Add a list to the DB
+const addListDB = async function(req, res) {
+	console.log("Adding this to DB: ", req.body);
+	const list = new List();
+
+	list.listid = req.body.listid;
+	list.title = req.body.title;
+
+	list.save();
 
 	return res.status(200).json({success: true, response: 'New list added.'});
-});
+}
 
 // PUT /renamelist - Renames a list
 router.put('/renamelist/:id', (req, res) => {
+	renameListDB(req, res);
+});
+
+// Rename list in DB
+const renameListDB = async function(req, res) {
 	const title = req.body.title.trim();
 	const oldName = getListName(req.params.id);
 	console.log("Rename list request received: ", title);
-	if(title != "" && oldName != null) {
-		setListName(req.params.id, title);
+
+	if(await setListName(req.params.id, title)) {
 		console.log(`List renamed: ${oldName} -> ${title}, sending client confirmation.`);
 		return res.status(200).json({success: true, response: `List renamed: ${oldName} -> ${title}`});
 	} else {
-		console.log("Invalid parameters, sending client rejection.");
-		return res.status(500).json({success: false, response: 'Invalid parameters.'});
+		console.log("List not found, sending client rejection.");
+		return res.status(500).json({success: false, response: 'List not found.'});
 	}
-});
+}
+
+// Sets the name of the list with specified ID, or null if not found
+const setListName = async function(id, newName) {
+	id = id.toString();
+
+	const list = await List.findOne({listid: id});
+
+	if(list === null) return false;
+
+	console.log("setListName: ", id, list.title);
+	list.title = newName;
+	list.save();
+
+	/*
+	for(let i = 0; i < tasx.board.lists.length; i++)
+		if(tasx.board.lists[i].listid.toString() === id) {
+			tasx.board.lists[i].title = newName;
+			return true;
+		}
+	*/
+
+	return true;
+}
+
 
 // DELETE /dellist/:listid - Deletes a list
 router.delete('/dellist/:listid', (req, res) => {
@@ -157,19 +275,6 @@ router.put('/layout', (req, res) => {
 
 	return res.status(200).json({success: true, response: 'New layout saved.'});
 });
-
-// Sets the name of the list with specified ID, or null if not found
-const setListName = function(id, newName) {
-	id = id.toString();
-
-	for(let i = 0; i < tasx.board.lists.length; i++)
-		if(tasx.board.lists[i].listid.toString() === id) {
-			tasx.board.lists[i].title = newName;
-			return true;
-		}
-
-	return null;
-}
 
 // Returns the name of the list with specified ID, or null if not found
 const getListName = function(id, index = false) {

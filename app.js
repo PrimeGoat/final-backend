@@ -3,8 +3,20 @@ const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
-
+const mongoose = require('mongoose');
+require('dotenv').config();
 const tasxRouter = require('./routes/tasx');
+
+// Connect to MongoDB
+mongoose.connect(process.env.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    useCreateIndex: true,
+})
+.then(() => {
+    console.log('MongoDB Connected');
+})
+.catch((err) => console.log(`Mongo err: ${err}`));
 
 const app = express();
 
