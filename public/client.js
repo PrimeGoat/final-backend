@@ -30,7 +30,7 @@ const getBoard = function() {
 }
 
 const getSysUrl = () => {
-	console.log(process.env.USERDOMAIN);
+	//console.log(process.env.USERDOMAIN);
 	//if(process.env.USERDOMAIN == "FLEXBOOX") return 'http://localhost:3000/'
 	if(location.hostname == 'localhost') return 'http://localhost:3000';
 	else return 'https://tasx-backend.herokuapp.com';
