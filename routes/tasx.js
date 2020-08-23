@@ -4,6 +4,8 @@ const tasx = require('../models/tasxBoard');
 const Task = require('../models/Task');
 const List = require('../models/List');
 const Board = require('../models/Board');
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
 
 // Initial population of DB
 const populateDB = function() {
@@ -73,8 +75,9 @@ const getBoard = async function(req, res) {
 		};
 
 		// Iterate through DB's tasks for this list
+		console.log("Incoming tasks: ", list.tasks);
 		for(task of list.tasks) {
-			task = await Task.find({_id: task});
+			task = await Task.findOne({_id: task});
 
 			const currentTask = {
 				taskid: task.taskid,
@@ -98,7 +101,6 @@ router.put('/renameboard', (req, res) => {
 
 const renameBoardDB = async function(req, res) {
 	const title = req.body.title.trim();
-	console.log("Rename board request received: ", title);
 	if(title != "") {
 		//tasx.board.title = title;
 		const board = await Board.findOne({});
@@ -123,7 +125,6 @@ router.post('/newlist', (req, res) => {
 
 // Add a list to the DB
 const addListDB = async function(req, res) {
-	console.log("Adding this to DB: ", req.body);
 	const list = new List();
 
 	list.listid = req.body.listid;
@@ -142,7 +143,7 @@ router.put('/renamelist/:id', (req, res) => {
 // Rename list in DB
 const renameListDB = async function(req, res) {
 	const title = req.body.title.trim();
-	const oldName = getListName(req.params.id);
+	const oldName = await List.findOne({listid: req.params.id});
 	console.log("Rename list request received: ", title);
 
 	if(await setListName(req.params.id, title)) {
@@ -162,9 +163,8 @@ const setListName = async function(id, newName) {
 
 	if(list === null) return false;
 
-	console.log("setListName: ", id, list.title);
 	list.title = newName;
-	list.save();
+	await list.save();
 
 	/*
 	for(let i = 0; i < tasx.board.lists.length; i++)
@@ -180,63 +180,112 @@ const setListName = async function(id, newName) {
 
 // DELETE /dellist/:listid - Deletes a list
 router.delete('/dellist/:listid', (req, res) => {
-	const index = getListName(req.params.listid, true);
-	const name = tasx.board.lists[index].title;
+	delListDB(req, res);
+});
 
-	console.log("Delete list: ", index, name);
+// Delete list from DB
+const delListDB = async function(req, res) {
+	const list = await List.findOneAndDelete({listid: req.params.listid});
 
-	if(name === null) {
+	const name = list.title;
+
+	if(list == null) {
 		console.log("Delete list: Invalid list, sending client rejection.");
 		return res.status(500).json({success: false, response: 'Delete list: Invalid list.'});
 	}
 
-	tasx.board.lists.splice(index, 1);
+	for(task of list.tasks) {console.log("Deleting task ", await Task.findOneAndDelete({_id: task}));}
 
-	console.log(`Task deleted: ID ${req.params.listid}, name ${name}.`);
+	console.log(`List deleted: ID ${req.params.listid}, name ${name}.`);
 	return res.status(200).json({success: true, response: `Task deleted: ID ${req.params.listid}, name ${name}.`});
-});
-
+}
 
 // PUSH /newtask/:listid - Adds new task to end of a list
 router.post('/newtask/:listid', (req, res) => {
-	const listIndex = getListName(req.params.listid, true);
-	if(!req.body.taskid || !req.body.title || listIndex === null) return res.status(500).json({success: false, response: 'Newtask: Invalid parameters.'});
+	newTaskDB(req, res);
+});
 
-	tasx.board.lists[listIndex].tasks.push(req.body);
+const newTaskDB = async function(req, res) {
+	const list = await List.findOne({ listid: req.params.listid });
+	const newTask = new Task();
+
+	console.log("Test");
+	console.log("List is ", list);
+	if(!list) return res.status(500).json({success: false, response: 'Newtask: Invalid parameters.'});
+
+	newTask.taskid = req.body.taskid;
+	newTask.title = req.body.title;
+	newTask.startDate = req.body.startDate;
+	newTask.dueDate = req.body.dueDate;
+	await newTask.save();
+	console.log("Test");
+
+	list.tasks.push(newTask._id);
+	await list.save();
+	console.log("Test");
+
+	//tasx.board.lists[listIndex].tasks.push(req.body);
+	console.log("Test");
 
 	return res.status(200).json({success: true, response: 'New task added.'});
-});
+
+}
 
 // PUT /updatetask - Edits a task
 router.put('/updatetask', (req, res) => {
-	const currentTaskIndex = getTaskById(req.body.taskid, true);
+	updateTaskDB(req, res);
+});
 
-	if(currentTaskIndex != null) {
-		tasx.board.lists[currentTaskIndex[0]].tasks[currentTaskIndex[1]] = req.body;
-		return res.status(200).json({success: true, response: `Task ${req.body.taskid} updated.`});
-	} else {
+const updateTaskDB = async function(req, res) {
+	const task = await Task.findOne({taskid: req.body.taskid});
+
+	console.log("Update Task: ", req.body.taskid);
+	if(!task) {
 		console.log("Updatetask: Invalid task specified, sending client rejection.")
 		return res.status(500).json({success: false, response: 'Invalid task ID'});
 	}
-});
+
+	task.title = req.body.title;
+	task.startDate = req.body.startDate;
+	task.dueDate = req.body.dueDate;
+
+	await task.save();
+
+	//tasx.board.lists[currentTaskIndex[0]].tasks[currentTaskIndex[1]] = req.body;
+	return res.status(200).json({success: true, response: `Task ${req.body.taskid} updated.`});
+}
 
 // DELETE /deltask/:taskid - Deletes a task
 router.delete('/deltask/:taskid', (req, res) => {
-	const indexes = getTaskById(req.params.taskid, true);
-	const name = getTaskById(req.params.taskid).title;
+	delTaskDB(req, res);
+});
 
-	console.log("Delete task: ", indexes, name);
+// Delete task from DB
+const delTaskDB = async function(req, res) {
+	const task = await Task.findOne({taskid: req.params.taskid});
+	await Task.deleteOne({taskid: req.params.taskid});
 
-	if(name === null) {
+	if(!task) {
 		console.log("Delete task: Invalid task, sending client rejection.");
 		return res.status(500).json({success: false, response: 'Delete task: Invalid task.'});
 	}
+	console.log("Task: ", task);
 
-	tasx.board.lists[indexes[0]].tasks.splice(indexes[1], 1);
+	const listsTask = await List.findOne({tasks: task._id });
+	console.log("List's task: ", listsTask.tasks);
+	await listsTask.tasks.pull(task._id);
+	console.log("Updated list: ", listsTask.tasks);
+	await listsTask.save();
+
+	console.log("Deleted: ", task);
+	name = task.title;
+
+	//tasx.board.lists[indexes[0]].tasks.splice(indexes[1], 1);
 
 	console.log(`Task deleted: ID ${req.params.taskid}, name ${name}.`);
 	return res.status(200).json({success: true, response: `Task deleted: ID ${req.params.taskid}, name ${name}.`});
-});
+
+}
 
 //  [
 //   { listid: 'DOING', tasks: [ '4' ] },
@@ -246,63 +295,48 @@ router.delete('/deltask/:taskid', (req, res) => {
 
 // PUT /layout - Sends a bare (only IDs) layout.  This is sent whenever a task or list is moved around.
 router.put('/layout', (req, res) => {
+	layoutDB(req, res);
+});
+
+const layoutDB = async function(req, res) {
 	console.log("Received an updated layout: ", req.body);
 
 	const newLists = [];
 
 	for(let i = 0; i < req.body.length; i++) {
-		let listName = getListName(req.body[i].listid);
-		if(listName == null) {
+		let list = await List.findOne({listid: req.body[i].listid});
+		if(!list) {
 			return res.status(500).json({success: false, response: 'Invalid list ID encountered.'});
 		}
-		let entry = {
-			listid: req.body[i].listid,
-			title: listName,
-			tasks: []
-		};
+		// let entry = {
+		// 	listid: req.body[i].listid,
+		// 	title: listName,
+		// 	tasks: []
+		// };
 
+		const tasks = [];
 		for(task of req.body[i].tasks) {
-			let taskName = getTaskById(task);
-			if(taskName == null) {
+			const taskItem = await Task.findOne({taskid: task});
+
+			if(taskItem == null) {
 				return res.status(500).json({success: false, response: 'Invalid task ID encountered.'});
 			}
-			entry.tasks.push(taskName);
+
+			tasks.push(taskItem._id);
 		}
-		newLists.push(entry);
+
+		list.tasks = tasks;
+
+		newLists.push(list);
 	}
 
-	tasx.board.lists = [...newLists];
+	await List.deleteMany({});
+	await List.insertMany(newLists);
+
+	//tasx.board.lists = [...newLists];
 
 	return res.status(200).json({success: true, response: 'New layout saved.'});
-});
 
-// Returns the name of the list with specified ID, or null if not found
-const getListName = function(id, index = false) {
-	id = id.toString();
-	for(let i = 0; i < tasx.board.lists.length; i++)
-		if(tasx.board.lists[i].listid.toString() === id) {
-			if(index) return i;
-			else return tasx.board.lists[i].title;
-		}
-	return null;
-}
-
-const wtf = function(hey) {
-	console.log(hey);
-}
-
-// Returns a task with specified ID, or null if not found
-const getTaskById = function(id, index = false) {
-	id = id.toString();
-	for(let i = 0; i < tasx.board.lists.length; i++) {
-		for(let j = 0; j < tasx.board.lists[i].tasks.length; j++) {
-			if(tasx.board.lists[i].tasks[j].taskid.toString() === id) {
-				if(index) return [i, j];
-				else return tasx.board.lists[i].tasks[j];
-			}
-		}
-	}
-	return null;
 }
 
 /*
