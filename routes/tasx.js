@@ -15,7 +15,7 @@ const populateDB = function() {
 	newTask.taskid = 234;
 	newTask.title = "Test Task";
 	newTask.startDate = "2020-04-20";
-	newTask.dueDate = "3000-04-20";
+	newTask.dueDate = "3500-04-20";
 	newTask.save();
 
 	newList.listid = 123;

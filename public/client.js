@@ -31,10 +31,18 @@ const getBoard = function() {
 
 const getSysUrl = () => {
 	//console.log(process.env.USERDOMAIN);
-	//if(process.env.USERDOMAIN == "FLEXBOOX") return 'http://localhost:3000/'
-	if(location.hostname == 'localhost') return 'http://localhost:3000';
+	//if(process.env.USERDOMAIN == "FLEXBOOX") return 'http://localhost:3500/'
+	if(location.hostname == 'localhost') return 'http://localhost:3500';
 	else return 'https://tasx-backend.herokuapp.com';
 }
+
+// Get the appropriate URL depending on where this is being hosted
+const getFrontUrl = () => {
+	if(location.hostname == 'localhost') return 'http://localhost:3000';
+	else return 'https://final-frontend.herokuapp.com';
+}
+
+document.querySelector('.calendarLink').href = getFrontUrl();
 
 // Send API command: All API interaction done through here
 const sendApi = function(command, data = "") {

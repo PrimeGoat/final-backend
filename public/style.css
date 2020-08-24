@@ -41,6 +41,11 @@ html,body {
 	margin: -2px;
 }
 
+.calendarLink {
+	position: absolute;
+	right: 225px;
+
+}
 
 .addList {
 	position: absolute;
